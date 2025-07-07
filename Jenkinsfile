@@ -71,5 +71,29 @@ pipeline {
                 '''
             }
         }
+         stage ('ArgoCD Trigger') {
+            steps {
+                sh """
+                    sed -i 's/${APP_NAME}.*/$IMAGE_NAME/g' ./k8s/deployment.yaml
+                    cat ./k8s/deployment.yaml
+                """
+            }
+        }
+
+        stage("Push the changed to Git") {
+            steps {
+                sh '''
+                    git config --global user.name "Nancy Magdy"
+                    git config --global user.email "nancymagdy092@gmail.com"
+                    git add ./k8s/deployment.yaml
+                    git commit -m "Updated Deployment Manifest"
+                '''
+                withCredentials([usernamePassword(credentialsId: 'github-token', usernameVariable: 'GIT_USERNAME', passwordVariable: 'GIT_PASSWORD')]) {
+                    sh '''
+                        git push https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/NancyMagdyy/Register-App-Deployment.git main
+                    '''
+                }
+            }
+        }
     }
 }
