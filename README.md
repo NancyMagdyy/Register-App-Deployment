@@ -1,8 +1,8 @@
 # 🚀 Register App — CI/CD Deployment Guide
 
 Welcome to the Register App CI/CD deployment guide!  
-This guide outlines a fully automated DevOps pipeline that handles building, scanning, analyzing, and pushing a Java-Maven application Docker image using Jenkins and other DevOps tools.
-![project](imgs/deploy.drawio.png)
+This project implements a complete CI/CD pipeline using Jenkins, integrating tools like Trivy, SonarQube, Docker, and ArgoCD to automate the build, test, security scanning, containerization, and deployment process of a Java-based application.
+![project](imgs/fullproject.gif)
 
 ---
 
@@ -16,6 +16,11 @@ This guide outlines a fully automated DevOps pipeline that handles building, sca
 | Trivy      | Scans code and Docker images for vulnerabilities |
 | Docker     | Builds and pushes container images           |
 | GitHub     | Hosts the source code                        |
+| Kubernetes | Orchestrates and runs containerized applications    |
+| Helm       | Manages Kubernetes resources using Helm charts      |
+| ArgoCD     | Automates deployment using GitOps for Kubernetes    |
+| Prometheus | Monitors and collects application performance data  |
+| Grafana    | Visualizes metrics and performance dashboards       |
 
 ---
 
@@ -84,6 +89,70 @@ docker run -d --name sonarqube -p 9000:9000 sonarqube:lts
 
 ---
 
+### 🧱 Install ArgoCD
+```bash
+kubectl create namespace argocd
+kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+kubectl port-forward svc/argocd-server -n argocd 8000:443
+```
+🔐 Retrieve Admin Password
+```bash
+kubectl get secret argocd-initial-admin-secret -n argocd \
+  -o jsonpath="{.data.password}" | base64 --decode
+```
+📥 Install ArgoCD CLI
+```bash
+VERSION=$(curl -s https://api.github.com/repos/argoproj/argo-cd/releases/latest \
+  | grep tag_name | cut -d '"' -f 4)
+curl -sSL -o argocd "https://github.com/argoproj/argo-cd/releases/download/$VERSION/argocd-linux-amd64"
+chmod +x argocd
+sudo mv argocd /usr/local/bin/
+```
+🔑 Login to ArgoCD
+```bash
+argocd login <ARGOCD_HOST> --username admin
+```
+🔧 Configure ArgoCD
+![project](imgs/argo-app.PNG)
+![project](imgs/argo-app1.PNG)
+![project](imgs/argo-git.PNG)
+---
+
+📊 Monitoring & Observability (Prometheus + Grafana)
+To monitor your application and infrastructure, install Prometheus and Grafana using Helm.
+
+🚀 Install Helm
+```bash
+curl https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | bash
+```
+📦 Add Helm Repositories
+```bash
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm repo add grafana https://grafana.github.io/helm-charts
+helm repo update
+```
+📈 Deploy Prometheus & Grafana
+```bash
+kubectl create namespace monitoring
+helm install prometheus prometheus-community/prometheus -n monitoring
+helm install grafana grafana/grafana -n monitoring
+```
+🔌 Access Grafana Dashboard
+```bash
+kubectl port-forward -n monitoring svc/grafana 3000:80
+```
+🔐 Retrieve Grafana Admin Password
+```bash
+kubectl get secret -n monitoring grafana -o jsonpath="{.data.admin-password}" | base64 --decode
+```
+---
+📊 Setup Grafana Dashboards
+- Login to Grafana at http://localhost:3000
+![grafana-prometheus](imgs/grafana-prometheus.PNG)
+![grafana](imgs/grafana-dashboard.PNG)
+
+---
+
 ## 🔐 Jenkins Credentials
 
 | Credential ID       | Used For               |
@@ -96,16 +165,3 @@ docker run -d --name sonarqube -p 9000:9000 sonarqube:lts
 
 
 ---
-
-### 🔧 Pipeline Build 
-![final](imgs/final.PNG)
-![consoleoutput](imgs/jenkins-consoleoutput.PNG)
-![consoleoutput](imgs/success.PNG)
-
-
-
-
-
----
-
-
